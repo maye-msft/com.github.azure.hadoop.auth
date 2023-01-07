@@ -45,21 +45,13 @@ public class OAuthBasedAccessTokenProvider implements CustomTokenProviderAdaptee
      */
     private final Random randRef = new Random();
 
-    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
-            DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
+
     private int minBackoffInterval;
 
-    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL,
-            DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
     private int maxBackoffInterval;
 
-    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
-            DefaultValue = DEFAULT_BACKOFF_INTERVAL)
     private int backoffInterval;
 
-    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT,
-            MinValue = 3,
-            DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
     private int customTokenFetchRetryCount;
 
     private  int retryCount = 0;
@@ -73,7 +65,10 @@ public class OAuthBasedAccessTokenProvider implements CustomTokenProviderAdaptee
         this.clientSecret =
                 getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
 
-
+        this.minBackoffInterval = configuration.getInt(AZURE_MIN_BACKOFF_INTERVAL, DEFAULT_MIN_BACKOFF_INTERVAL);
+        this.maxBackoffInterval = configuration.getInt(AZURE_MAX_BACKOFF_INTERVAL, DEFAULT_MAX_BACKOFF_INTERVAL);
+        this.backoffInterval = configuration.getInt(AZURE_BACKOFF_INTERVAL, DEFAULT_BACKOFF_INTERVAL);
+        this.customTokenFetchRetryCount = configuration.getInt(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT, DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT);
     }
 
 
@@ -92,25 +87,27 @@ public class OAuthBasedAccessTokenProvider implements CustomTokenProviderAdaptee
     @Override
     public String getAccessToken() throws IOException {
 
-
-        try{
-            AzureADToken token = AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, clientId, clientSecret);
-            this.tokenFetchTime = System.currentTimeMillis();
-            return token.getAccessToken();
-        } catch (AzureADAuthenticator.HttpException e) {
-            if(e.getHttpErrorCode() == 429 && retryCount<customTokenFetchRetryCount) { //Too many requests
-                LOG.debug("AADToken: Too many requests to MSI. Wait for retry");
-                try {
-                    Thread.sleep(getWaitInterval(++retryCount));
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
+        synchronized (this) {
+            try{
+                AzureADToken token = AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, clientId, clientSecret);
+                this.tokenFetchTime = System.currentTimeMillis();
+                return token.getAccessToken();
+            } catch (AzureADAuthenticator.HttpException e) {
+                if(e.getHttpErrorCode() == 429 && retryCount<customTokenFetchRetryCount) { //Too many requests
+                    LOG.debug("AADToken: Too many requests to MSI. Wait for retry");
+                    try {
+                        Thread.sleep(getWaitInterval(++retryCount));
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    if(retryCount==customTokenFetchRetryCount) {
+                        retryCount = 0;
+                    }
                 }
-                if(retryCount==customTokenFetchRetryCount) {
-                    retryCount = 0;
-                }
+                throw new IOException(e);
             }
-            throw new IOException(e);
         }
+
     }
 
     @Override

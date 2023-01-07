@@ -18,6 +18,7 @@ public class DFSCustomOAuthApp {
         conf.set("fs.azure.account.oauth2.client.endpoint", args[1]);
         conf.set("fs.azure.account.oauth2.client.id", args[2]);
         conf.set("fs.azure.account.oauth2.client.secret", args[3]);
+        conf.set("fs.azure.custom.token.fetch.retry.count", "3");
 
         FileSystem fs = FileSystem.get(URI.create(uri), conf);
         InputStream in = null;
