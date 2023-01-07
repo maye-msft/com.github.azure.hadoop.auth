@@ -15,9 +15,15 @@ public class DFSCustomMSIApp {
         Configuration conf = new Configuration();
         conf.set("fs.azure.account.auth.type", "Custom");
         conf.set("fs.azure.account.oauth.provider.type", "com.github.azure.hadoop.custom.auth.MSIBasedAccessTokenProvider");
-        conf.set("fs.azure.account.oauth2.msi.tenant", args.length>1?args[1]:"");
-        conf.set("fs.azure.account.oauth2.client.id",  args.length>2?args[1]:"");
-        conf.set("fs.azure.account.oauth2.msi.endpoint", args.length>3?args[3]:"");
+        if(args.length>1) {
+            conf.set("fs.azure.account.oauth2.msi.tenant", args[1]);
+        }
+        if(args.length>2) {
+            conf.set("fs.azure.account.oauth2.client.id", args[2]);
+        }
+        if(args.length>3) {
+            conf.set("fs.azure.account.oauth2.msi.endpoint", args[3]);
+        }
 
         FileSystem fs = FileSystem.get(URI.create(uri), conf);
         InputStream in = null;

@@ -78,9 +78,9 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
                 ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
                 AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
         this.tenantGuid =
-                getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+                getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT , "");
         this.clientId =
-                getConfigurationValue(configuration, FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+                getConfigurationValue(configuration, FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID, "");
         String authority = getConfigurationValue(configuration,
                 FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
                 AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
@@ -102,10 +102,7 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
         return value.trim();
     }
 
-    private String getConfigurationValue(Configuration configuration, String key) {
-        String value = configuration.get(key, null);
-        return value.trim();
-    }
+
 
     @Override
     public String getAccessToken() throws IOException {
