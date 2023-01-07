@@ -1,0 +1,135 @@
+package com.github.azure.hadoop.auth;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations;
+import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.Random;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+
+public class OAuthBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
+
+    private static final Logger LOG = LoggerFactory.getLogger(OAuthBasedAccessTokenProvider.class);
+
+
+    private String authEndpoint;
+    private String clientId;
+    private String clientSecret;
+
+    private long tokenFetchTime;
+
+    private static final long ONE_HOUR = 3600 * 1000;
+
+    /**
+     *  The minimum random ratio used for delay interval calculation.
+     */
+    private static final double MIN_RANDOM_RATIO = 0.8;
+
+    /**
+     *  The maximum random ratio used for delay interval calculation.
+     */
+    private static final double MAX_RANDOM_RATIO = 1.2;
+
+
+    /**
+     *  Holds the random number generator used to calculate randomized backoff intervals
+     */
+    private final Random randRef = new Random();
+
+    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
+            DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
+    private int minBackoffInterval;
+
+    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL,
+            DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
+    private int maxBackoffInterval;
+
+    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
+            DefaultValue = DEFAULT_BACKOFF_INTERVAL)
+    private int backoffInterval;
+
+    @ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT,
+            MinValue = 3,
+            DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
+    private int customTokenFetchRetryCount;
+
+    private  int retryCount = 0;
+
+    @Override
+    public void initialize(Configuration configuration, String accountName) throws IOException  {
+        this.authEndpoint =
+                getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+        this.clientId =
+                getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+        this.clientSecret =
+                getConfigurationValue(configuration, ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+
+
+    }
+
+
+
+
+    private String getConfigurationValue(Configuration configuration, String key, String defaultValue) {
+        String value = configuration.get(key, defaultValue);
+        return value.trim();
+    }
+
+    private String getConfigurationValue(Configuration configuration, String key) {
+        String value = configuration.get(key, null);
+        return value.trim();
+    }
+
+    @Override
+    public String getAccessToken() throws IOException {
+
+
+        try{
+            AzureADToken token = AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, clientId, clientSecret);
+            this.tokenFetchTime = System.currentTimeMillis();
+            return token.getAccessToken();
+        } catch (AzureADAuthenticator.HttpException e) {
+            if(e.getHttpErrorCode() == 429 && retryCount<customTokenFetchRetryCount) { //Too many requests
+                LOG.debug("AADToken: Too many requests to MSI. Wait for retry");
+                try {
+                    Thread.sleep(getWaitInterval(++retryCount));
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+                if(retryCount==customTokenFetchRetryCount) {
+                    retryCount = 0;
+                }
+            }
+            throw new IOException(e);
+        }
+    }
+
+    @Override
+    public Date getExpiryTime() {
+        return new Date(tokenFetchTime + ONE_HOUR);
+    }
+
+
+    public long getWaitInterval(final int retryCount) {
+        final long boundedRandDelta = (int) (this.backoffInterval * MIN_RANDOM_RATIO)
+                + this.randRef.nextInt((int) (this.backoffInterval * MAX_RANDOM_RATIO)
+                - (int) (this.backoffInterval * MIN_RANDOM_RATIO));
+
+        final double incrementDelta = (Math.pow(2, retryCount - 1)) * boundedRandDelta;
+
+        final long retryInterval = (int) Math.round(Math.min(this.minBackoffInterval + incrementDelta, maxBackoffInterval));
+
+        return retryInterval;
+    }
+}
