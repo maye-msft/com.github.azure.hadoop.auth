@@ -1,4 +1,4 @@
-package com.github.azure.hadoop.auth;
+package com.github.azure.hadoop.custom.auth;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -14,7 +14,7 @@ public class DFSCustomOAuthApp {
         String uri = args[0];
         Configuration conf = new Configuration();
         conf.set("fs.azure.account.auth.type", "Custom");
-        conf.set("fs.azure.account.oauth.provider.type", "com.github.azure.hadoop.auth.OAuthBasedAccessTokenProvider");
+        conf.set("fs.azure.account.oauth.provider.type", "com.github.azure.hadoop.custom.auth.OAuthBasedAccessTokenProvider");
         conf.set("fs.azure.account.oauth2.client.endpoint", args[1]);
         conf.set("fs.azure.account.oauth2.client.id", args[2]);
         conf.set("fs.azure.account.oauth2.client.secret", args[3]);

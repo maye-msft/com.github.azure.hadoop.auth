@@ -1,8 +1,6 @@
-package com.github.azure.hadoop.auth;
+package com.github.azure.hadoop.custom.auth;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;

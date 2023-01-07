@@ -1,4 +1,4 @@
-package com.github.azure.hadoop.auth;
+package com.github.azure.hadoop.custom.auth;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
