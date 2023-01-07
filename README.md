@@ -1,0 +1,1 @@
+https://github.com/maye-msft/com.github.azure.hadoop.auth
