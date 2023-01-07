@@ -63,13 +63,14 @@ mvn exec:java -Dexec.mainClass="com.github.azure.hadoop.custom.auth.DFSCustomMSI
 
 ## Deploy
 
-com.github.azure.hadoop.custom.auth-1.0-SNAPSHOT.jar
+Build the jar file and copy it to the "$HADOOP_HOME/share/hadoop/tools/lib",
 
 ```bash
 mvn clean package
+cp bin/com.github.azure.hadoop.custom.auth-1.0.jar $HADOOP_HOME/share/hadoop/tools/lib
 ```
 
-Copy the jar file to the "$HADOOP_HOME/share/hadoop/tools/lib", and add the following configuration to core-site.xml.
+Add the following configuration to core-site.xml.
 
 ```xml
 <property>
