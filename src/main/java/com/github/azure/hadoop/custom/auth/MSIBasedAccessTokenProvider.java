@@ -4,7 +4,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
@@ -103,7 +102,7 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
     @Override
     public String getAccessToken() throws IOException {
-
+        LOG.info("MSIBasedAccessTokenProvider: get token");
         synchronized (this) {
             try {
                 AzureADToken token = AzureADAuthenticator
@@ -112,7 +111,7 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
                 return token.getAccessToken();
             } catch (AzureADAuthenticator.HttpException e) {
                 if (e.getHttpErrorCode() == 429 && retryCount < customTokenFetchRetryCount) { //Too many requests
-                    LOG.debug("AADToken: Too many requests to MSI. Wait for retry");
+                    LOG.error("MSIBasedAccessTokenProvider: Too many requests to MSI. Wait for retry");
                     try {
                         Thread.sleep(getWaitInterval(++retryCount));
                     } catch (InterruptedException ex) {

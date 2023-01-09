@@ -4,7 +4,6 @@ This Repo is to provide a custom authentication provider for Azure Data Lake Sto
 
 So the custom AccessToken Provider "com.github.azure.hadoop.custom.auth.MSIBasedAccessTokenProvider" is to add retry when the request get [HTTP 429 error](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429).
 
-The retry count can be configured by the property "fs.azure.custom.token.fetch.retry.count" in core-site.xml. The default retry count is 3.
 
 ```xml
 <property>
@@ -26,6 +25,31 @@ The retry count can be configured by the property "fs.azure.custom.token.fetch.r
   <value>10</value>
 </property>
 ```
+We provide another custom AccessToken Provider "com.github.azure.hadoop.custom.auth.MSIFileCachedAccessTokenProvider" to cache the AccessToken, so that we can reduce the request to Azure Instance Metadata Service.
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>Custom</value>
+  <description>
+  Custom Authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>com.github.azure.hadoop.custom.auth.MSIFileCachedAccessTokenProvider</value>
+  <description>
+  classname of Custom Authentication Provider
+  </description>
+</property>
+<property>
+  <name>fs.azure.custom.token.fetch.retry.count</name>
+  <value>10</value>
+</property>
+```
+
+The retry count can be configured by the property "fs.azure.custom.token.fetch.retry.count" in core-site.xml. The default retry count is 3.
+
+
 
 The config of MSI is applicable to this custom authentication provider.
 
