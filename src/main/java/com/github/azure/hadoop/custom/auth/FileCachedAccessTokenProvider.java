@@ -8,6 +8,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.DateFormat;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
@@ -23,8 +26,11 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
     private long tokenFetchTime;
 
     private boolean fromCache = false;
+    private boolean deleteOnExit = true;
 
     protected abstract CustomTokenProviderAdaptee getImpl();
+
+    public static final String AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT = "fs.azure.custom.token.cache.delete.on.exit";
 
     @Override
     public String getAccessToken() throws IOException {
@@ -34,10 +40,12 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
         if(token==null) {
             fromCache = false;
             token = getImpl().getAccessToken();
+            LOG.info("Getting access token from Azure AD successfully.");
             try{
                 writeTokenToCache(token);
+                LOG.info("Token is written to cache. UUID: " + tokenFileUUID);
             } catch (IOException e) {
-                LOG.error("Failed to write token to file", e);
+                LOG.error("Failed to write token to file. UUID: " + tokenFileUUID, e);
             }
         } else {
             fromCache = true;
@@ -47,8 +55,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
     }
 
     private synchronized void writeTokenToCache(String token) throws IOException{
-        LOG.debug("Writing token to cache");
-        File tokenFile = new File(System.getProperty("user.home") + TOKEN_FILE_FOLDER + tokenFileUUID);
+        File tokenFile = new File(System.getProperty("user.home") + TOKEN_FILE_FOLDER + getTimestamp()+"/"+tokenFileUUID);
         RandomAccessFile raf = null;
         try {
             if (!tokenFile.exists()) {
@@ -58,33 +65,38 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
             raf = new RandomAccessFile(tokenFile, "rw");
             raf.setLength(0);
             raf.write(token.getBytes());
+            LOG.info("Writing token to cache "+tokenFile.getAbsolutePath());
         } catch (IOException e) {
             LOG.error("Failed to write token to file", e);
             throw e;
         } finally {
-            raf.close();
-            tokenFile.deleteOnExit();
+            if(raf!=null) {
+                raf.close();
+            }
+            if(deleteOnExit) {
+                tokenFile.deleteOnExit();
+            }
+
         }
 
 
     }
 
     private String getAccessTokenFromCache() throws IOException {
-        LOG.debug("Getting access token from cache");
+        LOG.info("Getting access token from cache");
         // create token cache folder if not exists
-        File tokenCacheFolder = new File(System.getProperty("user.home") + TOKEN_FILE_FOLDER);
-        if (!tokenCacheFolder.exists()) {
-            tokenCacheFolder.mkdirs();
-        }
-        // get files in the token cache folder
-        File[] files = tokenCacheFolder.listFiles();
-        //check if file create in 30 mins
-        if (files != null) {
-            for (File file : files) {
-                if (file.lastModified() > System.currentTimeMillis() - HALF_HOUR) {
-                    // read token from file
-                    this.tokenFetchTime = System.currentTimeMillis();
-                    return readTokenFromFile(file);
+        File tokenCacheFolder = new File(System.getProperty("user.home") + TOKEN_FILE_FOLDER+getTimestamp()+"/");
+        if (tokenCacheFolder.exists()) {
+            // get files in the token cache folder
+            File[] files = tokenCacheFolder.listFiles();
+            //check if file create in 30 mins
+            if (files != null) {
+                for (File file : files) {
+                    if (file.lastModified() > System.currentTimeMillis() - HALF_HOUR) {
+                        // read token from file
+                        this.tokenFetchTime = System.currentTimeMillis();
+                        return readTokenFromFile(file);
+                    }
                 }
             }
         }
@@ -121,6 +133,15 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
 
     @Override
     public void initialize(Configuration configuration, String accountName) throws IOException {
+        this.deleteOnExit = configuration.getBoolean(AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, true);
         this.getImpl().initialize(configuration, accountName);
     }
+
+    private static String getTimestamp() {
+        Format f = new SimpleDateFormat("yyyyMMddhh");
+        String str = f.format(new Date());
+        return str;
+    }
+
+
 }

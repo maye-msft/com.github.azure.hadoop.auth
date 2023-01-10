@@ -63,6 +63,8 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
     private  int retryCount = 0;
 
+
+
     @Override
     public void initialize(Configuration configuration, String accountName) throws IOException  {
         this.authEndpoint = getConfigurationValue(configuration,
@@ -102,18 +104,24 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
     @Override
     public String getAccessToken() throws IOException {
-        LOG.info("MSIBasedAccessTokenProvider: get token");
+        LOG.info("get access token");
+        if(retryCount>0) {
+            LOG.info("It is a retry");
+        }
         synchronized (this) {
             try {
                 AzureADToken token = AzureADAuthenticator
                         .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
                 this.tokenFetchTime = System.currentTimeMillis();
+                LOG.info("get access token from remote server successfully");
                 return token.getAccessToken();
             } catch (AzureADAuthenticator.HttpException e) {
+                LOG.error("get access token from remote server failed.");
                 if (e.getHttpErrorCode() == 429 && retryCount < customTokenFetchRetryCount) { //Too many requests
-                    LOG.error("MSIBasedAccessTokenProvider: Too many requests to MSI. Wait for retry");
                     try {
-                        Thread.sleep(getWaitInterval(++retryCount));
+                        long waitInterval = getWaitInterval(++retryCount);
+                        LOG.error("Too many requests to MSI. Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
+                        Thread.sleep(waitInterval);
                     } catch (InterruptedException ex) {
                         throw new RuntimeException(ex);
                     }
