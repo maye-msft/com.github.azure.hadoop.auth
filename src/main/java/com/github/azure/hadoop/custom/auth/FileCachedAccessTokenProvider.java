@@ -26,7 +26,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
     private long tokenFetchTime;
 
     private boolean fromCache = false;
-    private boolean deleteOnExit = true;
+    private boolean deleteOnExit = false;
 
     protected abstract CustomTokenProviderAdaptee getImpl();
 
@@ -133,7 +133,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
 
     @Override
     public void initialize(Configuration configuration, String accountName) throws IOException {
-        this.deleteOnExit = configuration.getBoolean(AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, true);
+        this.deleteOnExit = configuration.getBoolean(AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, false);
         this.getImpl().initialize(configuration, accountName);
     }
 

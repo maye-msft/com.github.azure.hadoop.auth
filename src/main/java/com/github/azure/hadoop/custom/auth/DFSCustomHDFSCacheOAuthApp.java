@@ -19,7 +19,7 @@ public class DFSCustomHDFSCacheOAuthApp {
         conf.set("fs.azure.account.oauth2.client.id", args[2]);
         conf.set("fs.azure.account.oauth2.client.secret", args[3]);
         conf.set("fs.azure.custom.token.fetch.retry.count", "3");
-        conf.set("fs.azure.custom.token.hdfs.cache.path", args[4]);
+//        conf.set("fs.azure.custom.token.hdfs.cache.path", args[4]);
         conf.set("fs.azure.custom.token.cache.delete.on.exit", "false");
 
         FileSystem fs = FileSystem.get(URI.create(uri), conf);

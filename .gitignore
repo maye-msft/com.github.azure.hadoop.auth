@@ -37,3 +37,5 @@ build/
 ### Mac OS ###
 .DS_Store
 cmd.md
+tmp/
+bin/com.github.azure.hadoop.custom.auth-1.0.zip

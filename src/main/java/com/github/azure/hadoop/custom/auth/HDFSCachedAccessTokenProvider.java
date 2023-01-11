@@ -1,7 +1,9 @@
 package com.github.azure.hadoop.custom.auth;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,8 +71,6 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
         Path tokenCacheFolder = new Path(hdfsRootPath+"/"+TOKEN_FILE_FOLDER+getTimestamp()+"/");
         Path tokenCacheFile = new Path(hdfsRootPath+"/"+TOKEN_FILE_FOLDER+getTimestamp()+"/"+tokenFileUUID);
 
-
-        RandomAccessFile raf = null;
         FSDataOutputStream out = null;
         try {
             if (!fs.exists(tokenCacheFolder)) {
@@ -85,7 +85,11 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
             throw e;
         } finally {
             if(out!=null) {
-                out.close();
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    LOG.error("Failed to close output stream", e);
+                }
             }
             if(deleteOnExit) {
                 fs.deleteOnExit(tokenCacheFile);
@@ -110,13 +114,23 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                    LocatedFileStatus file = files.next();
                    if (file.getModificationTime() + HALF_HOUR > System.currentTimeMillis()) {
                        LOG.info("Found token file in cache: " + file.getPath().toString());
+                       FSDataInputStream inputStream = null;
                        try{
-                           return IOUtils.toString(fs.open(file.getPath()));
+                           inputStream = fs.open(file.getPath());
+                           String token = IOUtils.toString(inputStream);
+                           return token;
                        } catch (IOException e) {
                            LOG.error("Failed to read token from file", e);
                            throw e;
                        } finally {
-                            fs.close();
+                            if(inputStream!=null) {
+                                try{
+                                    inputStream.close();
+                                } catch (IOException e) {
+                                    LOG.error("Failed to close input stream", e);
+                                }
+
+                            }
                        }
 
                    }
@@ -138,18 +152,17 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
 
     @Override
     public void initialize(Configuration configuration, String accountName) throws IOException {
-
-
-        this.deleteOnExit = configuration.getBoolean(FileCachedAccessTokenProvider.AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, true);
+        this.deleteOnExit = configuration.getBoolean(FileCachedAccessTokenProvider.AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, false);
         Configuration conf = new Configuration();
         this.tokenHDFSConf = conf;
         this.fs = FileSystem.get(conf);
         this.getImpl().initialize(configuration, accountName);
         this.hdfsRootPath = configuration.get(AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH);
         if(this.hdfsRootPath==null) {
-            throw new IOException("HDFS root path is not set. Please set "+AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH+" in core-site.xml");
+            //throw new IOException("HDFS root path is not set. Please set "+AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH+" in core-site.xml");
+            this.hdfsRootPath = "/tmp/"+accountName+"/";
+            LOG.info("HDFS root path is not set. Using default path: "+this.hdfsRootPath);
         }
-        
     }
 
     private static String getTimestamp() {
