@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.text.DateFormat;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -40,16 +39,16 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
         if(token==null) {
             fromCache = false;
             token = getImpl().getAccessToken();
-            LOG.info("Getting access token from Azure AD successfully.");
+            LOG.debug("Getting access token from Azure AD successfully.");
             try{
                 writeTokenToCache(token);
-                LOG.info("Token is written to cache. UUID: " + tokenFileUUID);
+                LOG.debug("Token is written to cache. UUID: " + tokenFileUUID);
             } catch (IOException e) {
                 LOG.error("Failed to write token to file. UUID: " + tokenFileUUID, e);
             }
         } else {
             fromCache = true;
-            LOG.info("Getting access token from local cache");
+            LOG.debug("Getting access token from local cache");
         }
         return token;
     }
@@ -65,7 +64,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
             raf = new RandomAccessFile(tokenFile, "rw");
             raf.setLength(0);
             raf.write(token.getBytes());
-            LOG.info("Writing token to cache "+tokenFile.getAbsolutePath());
+            LOG.debug("Writing token to cache "+tokenFile.getAbsolutePath());
         } catch (IOException e) {
             LOG.error("Failed to write token to file", e);
             throw e;
@@ -83,7 +82,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
     }
 
     private String getAccessTokenFromCache() throws IOException {
-        LOG.info("Getting access token from cache");
+        LOG.debug("Getting access token from cache");
         // create token cache folder if not exists
         File tokenCacheFolder = new File(System.getProperty("user.home") + TOKEN_FILE_FOLDER+getTimestamp()+"/");
         if (tokenCacheFolder.exists()) {

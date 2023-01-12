@@ -15,9 +15,7 @@ import java.util.Date;
 import java.util.Random;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_BACKOFF_INTERVAL;
 
 public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
@@ -104,16 +102,16 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
     @Override
     public String getAccessToken() throws IOException {
-        LOG.info("get access token");
+        LOG.debug("get access token");
         if(retryCount>0) {
-            LOG.info("It is a retry");
+            LOG.debug("It is a retry");
         }
         synchronized (this) {
             try {
                 AzureADToken token = AzureADAuthenticator
                         .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
                 this.tokenFetchTime = System.currentTimeMillis();
-                LOG.info("get access token from remote server successfully");
+                LOG.debug("get access token from remote server successfully");
                 return token.getAccessToken();
             } catch (AzureADAuthenticator.HttpException e) {
                 LOG.error("get access token from remote server failed.");
