@@ -116,18 +116,18 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
             } catch (AzureADAuthenticator.HttpException e) {
                 LOG.error("get access token from remote server failed.");
                 if (e.getHttpErrorCode() == 429 && retryCount < customTokenFetchRetryCount) { //Too many requests
-                    try {
-                        long waitInterval = getWaitInterval(++retryCount);
-                        LOG.error("Too many requests to MSI. Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
+                    long waitInterval = getWaitInterval(++retryCount);
+                    LOG.error("Too many requests to MSI. Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
+                    try{
                         Thread.sleep(waitInterval);
                     } catch (InterruptedException ex) {
-                        throw new RuntimeException(ex);
+                        LOG.error("Failed to wait for "+Math.round(waitInterval/1000)+" sec. retry immediately.");
                     }
                     if (retryCount == customTokenFetchRetryCount) {
                         retryCount = 0;
                     }
                 }
-                throw new IOException(e);
+                throw e;
             }
         }
     }
