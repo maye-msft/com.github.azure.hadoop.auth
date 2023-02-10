@@ -58,6 +58,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
             }
         } else {
             fromCache = true;
+            this.tokenFetchTime = System.currentTimeMillis();
             LOG.debug("Getting access token from local cache");
         }
         return token;
