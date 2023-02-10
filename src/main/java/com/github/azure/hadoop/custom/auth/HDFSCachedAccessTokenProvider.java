@@ -16,6 +16,7 @@ import java.util.UUID;
 
 public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
+    private static final String VERSION = "1.2.0";
     private static final Logger LOG = LoggerFactory.getLogger(HDFSCachedAccessTokenProvider.class);
     private static final String TOKEN_FILE_FOLDER = "/.azure/MSITokenCache/";
     public static final int HALF_HOUR = 30 * 60 * 1000;
@@ -42,7 +43,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
 
     @Override
     public String getAccessToken() throws IOException {
-        LOG.debug("Getting access token for Azure Storage account.");
+        LOG.info("Getting access token for Azure Storage account with retry and HDFS cache. "+ "Version: " + VERSION );
         //try to get the token from cache first
         String token = getAccessTokenFromCache();
         if(token==null) {
@@ -117,7 +118,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                            return token;
                        } catch (IOException e) {
                            LOG.error("Failed to read token from file", e);
-                           throw e;
+                           //throw e; // do not throw exception here, as we want to try to get token from AD
                        } finally {
                             if(inputStream!=null) {
                                 try{
