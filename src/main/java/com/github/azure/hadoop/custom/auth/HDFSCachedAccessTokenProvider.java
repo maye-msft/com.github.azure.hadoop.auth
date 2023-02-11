@@ -55,10 +55,15 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
             } catch (IOException e) {
                 LOG.error("Failed to write token to file. UUID: " + tokenFileUUID, e);
             }
+            LOG.info("Getting access token from Azure AD successfully.");
+            Date expiryTime = getExpiryTime();
+            if(expiryTime!=null) {
+                LOG.info("Token expiry time: " + expiryTime.toString());
+            }
         } else {
             fromCache = true;
-            this.tokenFetchTime = System.currentTimeMillis();
             LOG.info("Getting access token from local cache, and expiry time "+getExpiryTime());
+
         }
         return token;
     }
@@ -101,7 +106,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
         LOG.info("Start getting access token from HDFS cache");
         // create token cache folder if not exists
         Path tokenCacheFolder = new Path(hdfsRootPath+"/"+TOKEN_FILE_FOLDER+getTimestamp()+"/");
-
+        LOG.info("HDFS cache folder "+tokenCacheFolder.toString());
         if (fs.exists(tokenCacheFolder)) {
             // get files in the token cache folder
             RemoteIterator<LocatedFileStatus> files = fs.listFiles(tokenCacheFolder, false);
@@ -115,6 +120,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                        try{
                            inputStream = fs.open(file.getPath());
                            String token = IOUtils.toString(inputStream);
+                           this.tokenFetchTime = file.getModificationTime();
                            return token;
                        } catch (IOException e) {
                            LOG.error("Failed to read token from file", e);

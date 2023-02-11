@@ -22,6 +22,23 @@ public class DFSCustomHDFSCacheOAuthApp {
 //        conf.set("fs.azure.custom.token.hdfs.cache.path", args[4]);
         conf.set("fs.azure.custom.token.cache.delete.on.exit", "false");
 
+//        initialize the log4j system properly
+        org.apache.log4j.BasicConfigurator.configure();
+        org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.DEBUG);
+
+
+
+
+        System.setProperty("log4j.logger.org.apache.hadoop.fs.azure", "DEBUG");
+        System.setProperty("log4j.logger.org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider", "DEBUG");
+        System.setProperty("log4j.logger.com.github.azure.hadoop.custom.auth.MSIBasedAccessTokenProvider", "DEBUG");
+
+
+
+
+
+
+
         FileSystem fs = FileSystem.get(URI.create(uri), conf);
         InputStream in = null;
         try {
@@ -30,5 +47,7 @@ public class DFSCustomHDFSCacheOAuthApp {
         } finally {
             IOUtils.closeStream(in);
         }
+
+
     }
 }
