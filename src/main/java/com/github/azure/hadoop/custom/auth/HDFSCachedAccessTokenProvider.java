@@ -16,7 +16,6 @@ import java.util.UUID;
 
 public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
-    private static final String VERSION = "1.2.0";
     private static final Logger LOG = LoggerFactory.getLogger(HDFSCachedAccessTokenProvider.class);
     private static final String TOKEN_FILE_FOLDER = "/.azure/MSITokenCache/";
     public static final int HALF_HOUR = 30 * 60 * 1000;
@@ -43,23 +42,23 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
 
     @Override
     public String getAccessToken() throws IOException {
-        LOG.info("Getting access token for Azure Storage account with retry and HDFS cache. "+ "Version: " + VERSION );
+        LOG.info("Getting access token for Azure Storage account with retry and HDFS cache. "+ "Version: " + Version.VERSION );
         //try to get the token from cache first
         String token = getAccessTokenFromCache();
         if(token==null) {
             fromCache = false;
             token = getImpl().getAccessToken();
-            LOG.debug("Getting access token from Azure AD successfully.");
+            LOG.info("Getting access token from Azure AD successfully.");
             try{
                 writeTokenToCache(token);
-                LOG.debug("Token is written to cache. UUID: " + tokenFileUUID);
+                LOG.info("Token is written to cache. UUID: " + tokenFileUUID);
             } catch (IOException e) {
                 LOG.error("Failed to write token to file. UUID: " + tokenFileUUID, e);
             }
         } else {
             fromCache = true;
             this.tokenFetchTime = System.currentTimeMillis();
-            LOG.debug("Getting access token from local cache");
+            LOG.info("Getting access token from local cache, and expiry time "+getExpiryTime());
         }
         return token;
     }
@@ -99,7 +98,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     }
 
     private String getAccessTokenFromCache() throws IOException {
-        LOG.debug("Getting access token from HDFS cache");
+        LOG.info("Start getting access token from HDFS cache");
         // create token cache folder if not exists
         Path tokenCacheFolder = new Path(hdfsRootPath+"/"+TOKEN_FILE_FOLDER+getTimestamp()+"/");
 
@@ -111,7 +110,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                while(files.hasNext()) {
                    LocatedFileStatus file = files.next();
                    if (file.getModificationTime() + HALF_HOUR > System.currentTimeMillis()) {
-                       LOG.debug("Found token file in cache: " + file.getPath().toString());
+                       LOG.info("Found token file in cache: " + file.getPath().toString());
                        FSDataInputStream inputStream = null;
                        try{
                            inputStream = fs.open(file.getPath());
@@ -159,7 +158,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
         if(this.hdfsRootPath==null) {
             //throw new IOException("HDFS root path is not set. Please set "+AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH+" in core-site.xml");
             this.hdfsRootPath = "/tmp/"+accountName+"/";
-            LOG.debug("HDFS root path is not set. Using default path: "+this.hdfsRootPath);
+            LOG.info("HDFS token cache folder is not set. Using default path: "+this.hdfsRootPath);
         }
     }
 
