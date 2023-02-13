@@ -137,7 +137,7 @@ public abstract class FileCachedAccessTokenProvider implements CustomTokenProvid
     }
 
     private static String getTimestamp() {
-        Format f = new SimpleDateFormat("yyyyMMddhh");
+        Format f = new SimpleDateFormat("yyyyMMddHH");
         String str = f.format(new Date());
         return str;
     }
