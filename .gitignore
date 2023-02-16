@@ -39,3 +39,6 @@ build/
 cmd.md
 tmp/
 bin/com.github.azure.hadoop.custom.auth-1.0.zip
+.idea/codeStyles/codeStyleConfig.xml
+.idea/codeStyles/Project.xml
+bin/com.github.azure.hadoop.custom.auth-1.2.zip

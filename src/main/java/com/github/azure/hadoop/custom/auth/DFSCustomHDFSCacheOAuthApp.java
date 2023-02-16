@@ -24,13 +24,13 @@ public class DFSCustomHDFSCacheOAuthApp {
 
 //        initialize the log4j system properly
         org.apache.log4j.BasicConfigurator.configure();
-        org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.DEBUG);
+        //org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.DEBUG);
 
 
 
 
-        System.setProperty("log4j.logger.org.apache.hadoop.fs.azure", "DEBUG");
-        System.setProperty("log4j.logger.org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider", "DEBUG");
+        //System.setProperty("log4j.logger.org.apache.hadoop.fs.azure", "DEBUG");
+        //System.setProperty("log4j.logger.org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider", "DEBUG");
         System.setProperty("log4j.logger.com.github.azure.hadoop.custom.auth.MSIBasedAccessTokenProvider", "DEBUG");
 
 
@@ -41,6 +41,13 @@ public class DFSCustomHDFSCacheOAuthApp {
 
         FileSystem fs = FileSystem.get(URI.create(uri), conf);
         InputStream in = null;
+        try {
+            in = fs.open(new Path(uri));
+            IOUtils.copyBytes(in, System.out, 4096, false);
+        } finally {
+            IOUtils.closeStream(in);
+        }
+
         try {
             in = fs.open(new Path(uri));
             IOUtils.copyBytes(in, System.out, 4096, false);
