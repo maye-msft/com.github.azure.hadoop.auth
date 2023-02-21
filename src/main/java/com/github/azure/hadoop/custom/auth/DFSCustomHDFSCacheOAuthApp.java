@@ -4,9 +4,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Properties;
 
 public class DFSCustomHDFSCacheOAuthApp {
 
@@ -22,21 +27,23 @@ public class DFSCustomHDFSCacheOAuthApp {
 //        conf.set("fs.azure.custom.token.hdfs.cache.path", args[4]);
         conf.set("fs.azure.custom.token.cache.delete.on.exit", "false");
 
-//        initialize the log4j system properly
-        org.apache.log4j.BasicConfigurator.configure();
-        //org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.DEBUG);
+
+        //org.apache.log4j.BasicConfigurator.configure();
+
+        PatternLayout layout = new PatternLayout();
+        String conversionPattern = "%-7p %d [%t] %c %x - %m%n";
+        layout.setConversionPattern(conversionPattern);
+
+        // creates console appender
+        ConsoleAppender consoleAppender = new ConsoleAppender();
+        consoleAppender.setLayout(layout);
+        consoleAppender.activateOptions();
 
 
-
-
-        //System.setProperty("log4j.logger.org.apache.hadoop.fs.azure", "DEBUG");
-        //System.setProperty("log4j.logger.org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider", "DEBUG");
-        System.setProperty("log4j.logger.com.github.azure.hadoop.custom.auth.MSIBasedAccessTokenProvider", "DEBUG");
-
-
-
-
-
+        // configures the root logger
+        Logger logger = Logger.getLogger("com.github.azure.hadoop.custom.auth.HDFSCachedAccessTokenProvider");
+        logger.setLevel(org.apache.log4j.Level.DEBUG);
+        logger.addAppender(consoleAppender);
 
 
         FileSystem fs = FileSystem.get(URI.create(uri), conf);
@@ -47,7 +54,7 @@ public class DFSCustomHDFSCacheOAuthApp {
         } finally {
             IOUtils.closeStream(in);
         }
-
+        System.out.println();
         try {
             in = fs.open(new Path(uri));
             IOUtils.copyBytes(in, System.out, 4096, false);
