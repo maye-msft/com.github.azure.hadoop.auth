@@ -52,13 +52,19 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                 LOG.debug("Token from instance: " + this.token);
                 return this.token;
             } else { // set the token as null to force to get a new token
-                LOG.debug("existing token is expiring reset it. Version: " + Version.VERSION);
+                LOG.debug("existing token is expiring or null. Version: " + Version.VERSION);
                 this.token = null;
                 this.expiryTime = 0;
             }
 
             //try to get the token from cache first
-            loadAccessTokenFromCache(); // try to get token from local first
+            try {
+                loadAccessTokenFromCache(); // try to get token from local first
+            } catch (Exception e) {
+                LOG.error("Error occurred when try load token from local cache. The error can be ignored.", e);
+                this.token = null;
+                this.expiryTime = 0;
+            }
             if (this.token != null && this.token.trim().length() == 0) {// if token is empty, log this error
                 LOG.error("Failed to get access token from local cache. Invalid Token!, token length is zero! Try to request token from Azure AD.");
             }
@@ -68,10 +74,22 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                 return this.token;
             }
 
+            LOG.info("Start to get token from Azure AD."+ " Version: " + Version.VERSION);
             // try to get token form remote
-            this.token = getImpl().getAccessToken();
-            this.expiryTime = getImpl().getExpiryTime().getTime();
 
+            try {
+                this.token = getImpl().getAccessToken();
+                this.expiryTime = getImpl().getExpiryTime().getTime();
+            } catch (Exception e) {
+                LOG.error("Failed to get token from Azure AD."+ " Version: " + Version.VERSION, e);
+                if (e instanceof IOException) {
+                    throw e;
+                } else {
+                    throw new IOException("Unknown exception occurred!", e);
+                }
+            }
+
+            LOG.info("Token is written to cache. UUID: " + tokenFileUUID);
             if (this.token == null || this.token.trim().length() == 0) {
                 String msg = "Invalid Token!, token is null or zero length!";
                 LOG.error(msg);
