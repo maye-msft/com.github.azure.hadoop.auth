@@ -81,7 +81,9 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                 this.token = getImpl().getAccessToken();
                 this.expiryTime = getImpl().getExpiryTime().getTime();
             } catch (Exception e) {
-                LOG.error("Failed to get token from Azure AD."+ " Version: " + Version.VERSION, e);
+                LOG.error("Failed to get token from Azure AD."+ " Version: " + Version.VERSION);
+                LOG.debug("Failed to get token from Azure AD."+ " Version: " + Version.VERSION+". "+e.toString());
+
                 if (e instanceof IOException) {
                     throw e;
                 } else {
@@ -89,7 +91,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
                 }
             }
 
-            LOG.info("Token is written to cache. UUID: " + tokenFileUUID);
+
             if (this.token == null || this.token.trim().length() == 0) {
                 String msg = "Invalid Token!, token is null or zero length!";
                 LOG.error(msg);
@@ -125,6 +127,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
             out = fs.create(tokenCacheFile, true);
             out.write(this.token.getBytes());
             out.flush();
+            LOG.info("Token has been written to cache. file path: " + tokenCacheFile);
         } catch (IOException e) {
             LOG.error("Failed to write token to file", e);
             throw e;
@@ -196,9 +199,13 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
 
                             }
                         }
+                    } else {
+                        LOG.debug("Found expired token, "+fileName+" skip it.");
                     }
 
                 }
+
+                LOG.debug("Cannot found cached token in "+tokenCacheFolder);
             }
         }
     }

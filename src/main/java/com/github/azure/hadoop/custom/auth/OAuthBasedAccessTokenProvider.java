@@ -91,15 +91,17 @@ public class OAuthBasedAccessTokenProvider implements CustomTokenProviderAdaptee
                 AzureADToken token = AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, clientId, clientSecret);
                 this.tokenFetchTime = System.currentTimeMillis();
                 return token.getAccessToken();
-            } catch (AzureADAuthenticator.HttpException e) {
-                if(e.getHttpErrorCode() == 429 && retryCount<customTokenFetchRetryCount) { //Too many requests
-                    LOG.debug("AADToken: Too many requests to MSI. Wait for retry");
-                    try {
-                        Thread.sleep(getWaitInterval(++retryCount));
+            } catch (Exception e) {
+                LOG.error("get access token from remote server failed with exception. " + e.toString());
+                if(retryCount<customTokenFetchRetryCount) { //Too many requests
+                    long waitInterval = getWaitInterval(++retryCount);
+                    LOG.error("Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
+                    try{
+                        Thread.sleep(waitInterval);
                     } catch (InterruptedException ex) {
-                        throw new RuntimeException(ex);
+                        LOG.error("Failed to wait for "+Math.round(waitInterval/1000)+" sec. retry immediately.");
                     }
-                    if(retryCount==customTokenFetchRetryCount) {
+                    if (retryCount == customTokenFetchRetryCount) {
                         retryCount = 0;
                     }
                 }

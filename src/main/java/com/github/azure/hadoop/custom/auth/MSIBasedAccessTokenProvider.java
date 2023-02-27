@@ -113,11 +113,11 @@ public class MSIBasedAccessTokenProvider implements CustomTokenProviderAdaptee {
                 this.tokenFetchTime = System.currentTimeMillis();
                 LOG.debug("get access token from remote server successfully");
                 return token.getAccessToken();
-            } catch (AzureADAuthenticator.HttpException e) {
-                LOG.error("get access token from remote server failed.");
-                if (e.getHttpErrorCode() == 429 && retryCount < customTokenFetchRetryCount) { //Too many requests
+            } catch (Exception e) {
+                LOG.error("get access token from remote server failed with exception. " + e.toString());
+                if (retryCount < customTokenFetchRetryCount) { //Too many requests
                     long waitInterval = getWaitInterval(++retryCount);
-                    LOG.error("Too many requests to MSI. Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
+                    LOG.error("Wait for retry in "+Math.round(waitInterval/1000)+" sec.");
                     try{
                         Thread.sleep(waitInterval);
                     } catch (InterruptedException ex) {
