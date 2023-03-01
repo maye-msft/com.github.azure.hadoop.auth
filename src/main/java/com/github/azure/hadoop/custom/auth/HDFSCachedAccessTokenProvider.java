@@ -13,12 +13,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
+
 
 public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProviderAdaptee {
 
     private static final Logger LOG = LoggerFactory.getLogger(HDFSCachedAccessTokenProvider.class);
-    private static final String TOKEN_FILE_FOLDER = "/.azure/MSITokenCache/";
-    //public static final int HALF_HOUR = 30 * 60 * 1000;
 
     public static final int TEN_MINUTES = 10 * 60 * 1000;
 
@@ -34,6 +34,10 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     private String hdfsRootPath;
     private Configuration tokenHDFSConf;
     private boolean deleteOnExit;
+
+    private String clientId;
+
+    private String accountName;
 
     protected abstract CustomTokenProviderAdaptee getImpl();
 
@@ -114,16 +118,15 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
 
 
     private synchronized void writeTokenToCache(String tokenToWrite, long expiryTimeToWrite) throws IOException {
-        String ts = getCacheFolderName();
-        Path tokenCacheFolder = new Path(hdfsRootPath + "/" + TOKEN_FILE_FOLDER + ts + "/");
-        Path tokenCacheFile = new Path(hdfsRootPath + "/" + TOKEN_FILE_FOLDER + ts + "/" + tokenFileUUID + "." + expiryTimeToWrite);
+        String folderName = getCacheFolderName();
+        Path tokenCacheFolder = new Path(folderName);
+        Path tokenCacheFile = new Path(folderName + "/" + tokenFileUUID + "." + expiryTimeToWrite);
 
         FSDataOutputStream out = null;
         try {
             if (!fs.exists(tokenCacheFolder)) {
                 fs.mkdirs(tokenCacheFolder);
             }
-
             out = fs.create(tokenCacheFile, true);
             out.write(this.token.getBytes());
             out.flush();
@@ -151,8 +154,8 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     private synchronized void loadAccessTokenFromCache() throws IOException {
         LOG.info("Start getting access token from HDFS cache");
         // create token cache folder if not exists
-        String ts = getCacheFolderName();
-        Path tokenCacheFolder = new Path(hdfsRootPath + "/" + TOKEN_FILE_FOLDER + ts + "/");
+        String folderName = getCacheFolderName();
+        Path tokenCacheFolder = new Path(folderName);
         LOG.info("HDFS cache folder " + tokenCacheFolder.toString());
         if (fs.exists(tokenCacheFolder)) {
             // get files in the token cache folder
@@ -224,21 +227,27 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     public void initialize(Configuration configuration, String accountName) throws IOException {
         this.deleteOnExit = configuration.getBoolean(FileCachedAccessTokenProvider.AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, false);
         Configuration conf = new Configuration();
+        this.clientId =
+                configuration.get(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID, "unknown-client");
+        this.accountName = accountName;
         this.tokenHDFSConf = conf;
         this.fs = FileSystem.get(conf);
         this.getImpl().initialize(configuration, accountName);
+        // get the root folder of cache folder
         this.hdfsRootPath = configuration.get(AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH);
         if (this.hdfsRootPath == null) {
-            //throw new IOException("HDFS root path is not set. Please set "+AZURE_CUSTOM_TOKEN_HDFS_CACHE_PATH+" in core-site.xml");
-            this.hdfsRootPath = "/tmp/" + accountName + "/";
+            this.hdfsRootPath = "/tmp/.azure/";
             LOG.info("HDFS token cache folder is not set. Using default path: " + this.hdfsRootPath);
         }
+
     }
 
-    private static String getCacheFolderName() {
-        Format f = new SimpleDateFormat("yyyyMMddHH");
-        String str = f.format(new Date());
-        return str;
+
+
+    private String getCacheFolderName() {
+        Format f = new SimpleDateFormat("yyyyMMdd");
+        String dateStr = f.format(new Date());
+        return hdfsRootPath+"/MSITokenCache/"+clientId + "/" + accountName + "/"+dateStr;
     }
 
 
