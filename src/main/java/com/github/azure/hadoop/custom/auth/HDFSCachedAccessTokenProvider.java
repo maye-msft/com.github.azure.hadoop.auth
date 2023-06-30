@@ -224,7 +224,7 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     }
 
     @Override
-    public void initialize(Configuration configuration, String accountName) throws IOException {
+    public synchronized void initialize(Configuration configuration, String accountName) throws IOException {
         this.deleteOnExit = configuration.getBoolean(FileCachedAccessTokenProvider.AZURE_CUSTOM_TOKEN_CACHE_DELETE_ON_EXIT, false);
         Configuration conf = new Configuration();
         this.clientId =
@@ -247,7 +247,8 @@ public abstract class HDFSCachedAccessTokenProvider implements CustomTokenProvid
     private String getCacheFolderName() {
         Format f = new SimpleDateFormat("yyyyMMdd");
         String dateStr = f.format(new Date());
-        return hdfsRootPath+"/MSITokenCache/"+clientId + "/" + accountName + "/"+dateStr;
+        String[] accountNames = accountName.split(".");
+        return hdfsRootPath+"/MSITokenCache/"+clientId + "/" + accountNames[0] + "/"+dateStr;
     }
 
 
